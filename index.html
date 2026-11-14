@@ -229,7 +229,7 @@ function styleEl(el,pos){const c=state.holds.get(pos);el.style.background=c||"";
 function renderOne(pos){const el=document.querySelector(`[data-pos="${pos}"]`);if(el)styleEl(el,pos);}
 function renderBoard(){
   const board=$("board");board.innerHTML="";
-  const g=state.geom,w=g.maxX-g.minX,h=g.maxY-g.minY;
+  const g=state.geom,w=g.maxX-g.minX,h=g.maxY-g.minY; 
   board.style.aspectRatio=`${w} / ${h}`;
   if(state.kickDivider!==null){
     const top=100*(1-(state.kickDivider-g.minY)/h);
