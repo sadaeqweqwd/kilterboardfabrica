@@ -195,6 +195,14 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
 .name::placeholder{color:var(--faint)}
 .name:focus{border-bottom-color:var(--focus)}
 .picks{display:flex;gap:8px;margin-top:12px}
+.nmrow{display:flex;align-items:center;gap:10px;margin-top:8px;background:var(--soft);border-radius:10px;padding:0 12px;min-height:42px;cursor:pointer;font-size:14px;font-weight:600;color:var(--ink)}
+.nmrow small{flex:1;font-size:12.5px;font-weight:500;color:var(--mut)}
+.nmrow input{appearance:none;-webkit-appearance:none;margin:0;flex:none;width:38px;height:22px;border-radius:999px;background:var(--faint);position:relative;cursor:pointer;transition:background .15s}
+.nmrow input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0004;transition:transform .15s}
+.nmrow input:checked{background:var(--danger)}
+.nmrow input:checked::after{transform:translateX(16px)}
+.nmrow input:focus-visible{box-shadow:0 0 0 2px var(--focus)}
+.nm{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.02em;line-height:1.5;vertical-align:1px;white-space:nowrap;color:var(--danger);background:color-mix(in srgb,var(--danger) 16%,transparent)}
 .pick{position:relative;flex:1;display:flex;align-items:center;gap:6px;background:var(--soft);border-radius:10px;padding:0 10px;min-height:42px;min-width:0;font-size:13px;color:var(--mut);font-weight:600}
 .pick select{appearance:none;-webkit-appearance:none;border:0;background:transparent;font:600 15px var(--font);color:var(--ink);flex:1;min-width:0;padding:10px 18px 10px 0;cursor:pointer;outline:none}
 .pick::after{content:"";position:absolute;right:12px;top:50%;width:6px;height:6px;border-right:1.6px solid var(--mut);border-bottom:1.6px solid var(--mut);transform:translateY(-70%) rotate(45deg);pointer-events:none}
@@ -327,6 +335,7 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
         <label class="pick">Grade<select id="climbGrade"></select></label>
         <label class="pick">Angle<select id="climbAngle"></select></label>
       </div>
+      <label class="nmrow" for="climbNoMatch">No matching<small>No two hands on one hold</small><input type="checkbox" id="climbNoMatch" role="switch"></label>
       <div class="actions">
         <button class="btn primary" id="saveBtn">Save</button>
         <button class="btn" id="shareBtn"><svg class="i"><use href="#i-link"/></svg>Share</button>
@@ -344,7 +353,7 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
       <div class="pub" id="pubForm" hidden>
         <label class="set">Climb name<input id="pubName" class="field" maxlength="60" autocomplete="off"></label>
         <label class="set">Your name, shown as the setter<input id="pubSetter" class="field" maxlength="40" autocomplete="nickname" placeholder="Optional"></label>
-        <p class="cnote">Everyone on this site can see and load published climbs, with its grade and angle. Once published, a climb can't be edited or removed from here.</p>
+        <p class="cnote">Everyone on this site can see and load published climbs, with their grade, angle and no-matching rule. Once published, a climb can't be edited or removed from here.</p>
         <div class="prow"><button class="btn" id="pubCancel">Cancel</button><button class="btn primary" id="pubGo">Publish</button></div>
       </div>
     </section>
@@ -404,7 +413,7 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
         <ul class="editor-only">
           <li>Close the Kilter app before connecting. The board accepts one connection at a time.</li>
           <li>The board updates by itself after every change.</li>
-          <li>Share links carry the climb's holds, name, grade and angle.</li>
+          <li>Share links carry the climb's holds, name, grade, angle and no-matching rule.</li>
           <li>Keys: <kbd>1</kbd>–<kbd>5</kbd> roles, <kbd>E</kbd> erase, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo.</li>
         </ul>
         <ul class="games-only">
@@ -489,7 +498,7 @@ const state = {
   boost: store.get("boost", false),
   mode: "editor", override: null,
   library: store.get("library", []),
-  meta: { name: "", grade: "", angle: 40 },
+  meta: { name: "", grade: "", angle: 40, noMatch: false },
   zoom: 100,
   api: 3,
   sending: false, queued: null
@@ -890,7 +899,7 @@ function clearHolds() {
 }
 
 /* ---------- Share links ----------
-   #c<holds>[-g<grade><angle>][-n<name as hex>]. Only letters, digits and hyphens, so the link survives everywhere.
+   #c<holds>[-g<grade><angle>][-n<name as hex>][-m = no matching]. Only letters, digits and hyphens, so the link survives everywhere.
    Holds: 2 base-36 chars for the hold + a role letter (or x + 6 hex digits for a custom colour). */
 const hexText = {
   enc: t => [...new TextEncoder().encode(t)].map(b => b.toString(16).padStart(2, "0")).join(""),
@@ -905,6 +914,7 @@ function encodeClimb() {
   s += "-g" + (GRADES.indexOf(state.meta.grade) + 1).toString(36).padStart(2, "0") + Math.round(state.meta.angle / 5).toString(36);
   const name = state.meta.name.trim().slice(0, 60);
   if (name) s += "-n" + hexText.enc(name);
+  if (state.meta.noMatch) s += "-m";
   return s;
 }
 function decodeClimb(code) {
@@ -929,7 +939,7 @@ function decodeClimb(code) {
       meta = Object.assign(meta || {}, { grade: GRADES[parseInt(x.slice(1, 3), 36) - 1] || "", angle: ANGLES.includes(angle) ? angle : 40 });
     } else if (/^n([0-9a-f]{2})+$/.test(x)) {
       try { meta = Object.assign(meta || {}, { name: hexText.dec(x.slice(1)).slice(0, 60) }); } catch (_) {}
-    }
+    } else if (x === "m") meta = Object.assign(meta || {}, { noMatch: true });
   }
   return { holds, meta };
 }
@@ -940,7 +950,7 @@ function loadFromHash() {
   if (!d) { toast("That share link is damaged."); return false; }
   if (state.mode !== "editor") setMode("editor", true);
   pushUndo(); state.holds = d.holds;
-  if (d.meta) { state.meta = { name: d.meta.name || "", grade: d.meta.grade || "", angle: d.meta.angle ?? 40 }; syncMetaInputs(); renderLibrary(); }
+  if (d.meta) { state.meta = { name: d.meta.name || "", grade: d.meta.grade || "", angle: d.meta.angle ?? 40, noMatch: !!d.meta.noMatch }; syncMetaInputs(); renderLibrary(); }
   afterChange();
   toast(d.meta && d.meta.name ? `Loaded “${d.meta.name}”` : `Loaded a shared climb with ${d.holds.size} holds`);
   return true;
@@ -965,7 +975,7 @@ function saveToLibrary() {
   if (!state.holds.size) { toast("Set some holds first."); return; }
   const name = state.meta.name.trim() || `Untitled climb ${state.library.length + 1}`;
   state.meta.name = name; $("climbName").value = name;
-  const entry = { name, grade: state.meta.grade, angle: state.meta.angle, holds: snapshot(), updated: Date.now() };
+  const entry = { name, grade: state.meta.grade, angle: state.meta.angle, noMatch: !!state.meta.noMatch, holds: snapshot(), updated: Date.now() };
   const i = state.library.findIndex(c => c.name.toLowerCase() === name.toLowerCase());
   if (i >= 0) state.library[i] = entry; else state.library.unshift(entry);
   saveLibrary(); renderLibrary(); saveDraft();
@@ -973,9 +983,14 @@ function saveToLibrary() {
 }
 function loadClimb(c) {
   pushUndo(); restore(c.holds || []);
-  state.meta = { name: c.name || "", grade: c.grade || "", angle: c.angle ?? 40 };
+  state.meta = { name: c.name || "", grade: c.grade || "", angle: c.angle ?? 40, noMatch: !!c.noMatch };
   syncMetaInputs(); afterChange(); renderLibrary();
   toast(`Loaded “${state.meta.name || "climb"}”`);
+}
+function noMatchBadge(ttl, on) {
+  if (!on) return;
+  const b = document.createElement("span"); b.className = "nm"; b.textContent = "No matching"; b.title = "Matching hands on a hold is not allowed";
+  ttl.appendChild(b);
 }
 function renderLibrary() {
   const ul = $("lib"), filter = $("libFilter"); ul.textContent = "";
@@ -987,7 +1002,7 @@ function renderLibrary() {
     ul.appendChild(li); return;
   }
   const q = filter.value.trim().toLowerCase();
-  const shown = state.library.filter(c => !q || `${c.name} ${c.grade || ""}`.toLowerCase().includes(q));
+  const shown = state.library.filter(c => !q || `${c.name} ${c.grade || ""} ${c.noMatch ? "no matching" : ""}`.toLowerCase().includes(q));
   if (!shown.length) {
     const li = document.createElement("li"); li.className = "empty";
     li.textContent = `No climbs match “${filter.value.trim()}”.`;
@@ -997,7 +1012,7 @@ function renderLibrary() {
     const li = document.createElement("li");
     if (c.name === state.meta.name) li.className = "cur";
     const open = document.createElement("button"); open.className = "open"; open.title = `Open “${c.name}”`;
-    const ttl = document.createElement("span"); ttl.className = "ttl"; ttl.textContent = c.name;
+    const ttl = document.createElement("span"); ttl.className = "ttl"; ttl.textContent = c.name; noMatchBadge(ttl, c.noMatch);
     const sub = document.createElement("span"); sub.className = "sub";
     sub.textContent = [c.grade || "No grade", `${c.angle ?? 40}°`, (n => `${n} hold${n === 1 ? "" : "s"}`)((c.holds || []).length)].join(" · ");
     open.append(ttl, sub);
@@ -1016,7 +1031,7 @@ function renderLibrary() {
     li.append(open, del); ul.appendChild(li);
   }
 }
-function climbJSON() { return { v: 2, name: state.meta.name, grade: state.meta.grade, angle: state.meta.angle, holds: snapshot() }; }
+function climbJSON() { return { v: 2, name: state.meta.name, grade: state.meta.grade, angle: state.meta.angle, noMatch: !!state.meta.noMatch, holds: snapshot() }; }
 function roleFromColor(hex) {
   const up = String(hex).toUpperCase();
   for (const r of Object.keys(ROLES)) if (ROLES[r].color === up) return { role: r };
@@ -1024,7 +1039,7 @@ function roleFromColor(hex) {
   return /^#[0-9A-F]{6}$/.test(up) ? { role: "custom", color: up } : { role: "hand" };
 }
 function normalizeClimb(c) {
-  if (Array.isArray(c.holds) && c.holds.length && Array.isArray(c.holds[0])) return { name: c.name || "", grade: c.grade || "", angle: c.angle ?? 40, holds: c.holds };
+  if (Array.isArray(c.holds) && c.holds.length && Array.isArray(c.holds[0])) return { name: c.name || "", grade: c.grade || "", angle: c.angle ?? 40, noMatch: !!(c.noMatch || c.no_match), holds: c.holds };
   if (Array.isArray(c.holds)) {
     const holds = [];
     for (const h of c.holds) {
@@ -1033,7 +1048,7 @@ function normalizeClimb(c) {
       const e = roleFromColor(h.color);
       holds.push([id, e.role, e.color || null]);
     }
-    return { name: c.name || "Imported climb", grade: c.grade || "", angle: c.angle ?? 40, holds };
+    return { name: c.name || "Imported climb", grade: c.grade || "", angle: c.angle ?? 40, noMatch: !!(c.noMatch || c.no_match), holds };
   }
   return null;
 }
@@ -1085,6 +1100,7 @@ async function sb(path, opts = {}) {
   return data;
 }
 function commError(e) {
+  if (e.code === "PGRST204" || /no_match/.test(e.message)) return "The database needs the no-matching column. Run the one-line SQL update in Supabase.";
   if (e.code === "PGRST205" || e.code === "42P01" || /does not exist|schema cache/i.test(e.message)) return "The community table isn't set up in the database yet.";
   if (e.code === "23514" || e.code === "22P02") return "The database didn't accept that climb.";
   if (e.status === 401 || e.status === 403 || e.code === "42501") return "The database refused the request. Check its access rules.";
@@ -1097,7 +1113,7 @@ async function loadCommunity(reset) {
   const token = ++comm.token;
   renderCommunity("Loading…");
   try {
-    let q = `climbs?select=id,created_at,name,setter,grade,angle,holds&board=eq.${BOARD_ID}&order=created_at.desc&offset=${comm.offset}&limit=${COMM_PAGE}`;
+    let q = `climbs?select=*&board=eq.${BOARD_ID}&order=created_at.desc&offset=${comm.offset}&limit=${COMM_PAGE}`;
     const term = comm.q.replace(/["\\,()*]/g, " ").replace(/\s+/g, " ").trim();
     if (term) q += "&or=" + encodeURIComponent(`(name.ilike."*${term}*",setter.ilike."*${term}*",grade.ilike."*${term}*")`);
     const rows = await sb(q);
@@ -1114,7 +1130,7 @@ function renderCommunity(msg) {
   for (const c of comm.items) {
     const li = document.createElement("li");
     const open = document.createElement("button"); open.className = "open"; open.title = `Open “${c.name}”`;
-    const ttl = document.createElement("span"); ttl.className = "ttl"; ttl.textContent = c.name;
+    const ttl = document.createElement("span"); ttl.className = "ttl"; ttl.textContent = c.name; noMatchBadge(ttl, c.no_match);
     const sub = document.createElement("span"); sub.className = "sub";
     const when = new Date(c.created_at);
     sub.textContent = [c.grade || "No grade", `${c.angle ?? 40}°`, holdsLabel((c.holds || []).length), c.setter ? "by " + c.setter : "", isNaN(when) ? "" : when.toLocaleDateString()].filter(Boolean).join(" · ");
@@ -1138,7 +1154,7 @@ function openCommunity(c) {
     if (role in ROLES) return [id, role, null];
     return role === "custom" && /^#[0-9A-F]{6}$/.test(color || "") ? [id, role, color] : null;
   }).filter(Boolean);
-  loadClimb({ name: String(c.name || "").slice(0, 60), grade: GRADES.includes(c.grade) ? c.grade : "", angle: ANGLES.includes(+c.angle) ? +c.angle : 40, holds });
+  loadClimb({ name: String(c.name || "").slice(0, 60), grade: GRADES.includes(c.grade) ? c.grade : "", angle: ANGLES.includes(+c.angle) ? +c.angle : 40, noMatch: !!c.no_match, holds });
   toast(`Loaded “${c.name}”${c.setter ? " by " + c.setter : ""}. Save it to keep it in your library.`);
   if (window.matchMedia("(max-width: 959px)").matches) $("wrap").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -1153,12 +1169,12 @@ async function publishClimb() {
   if (!state.holds.size) { toast("Set some holds first."); return; }
   store.set("setter", setter);
   const holds = [...state.holds].map(([id, e]) => [ALL[id].led, e.role, e.role === "custom" ? e.color : null]).sort((a, b) => a[0] - b[0]);
-  const sig = JSON.stringify([name.toLowerCase(), holds]), done = store.get("published", []);
+  const sig = JSON.stringify([name.toLowerCase(), holds, !!state.meta.noMatch]), done = store.get("published", []);
   if (done.includes(sig)) { toast("You've already published this climb."); return; }
   btn.disabled = true; btn.textContent = "Publishing…";
   try {
     await sb("climbs", { method: "POST", headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ name: name.slice(0, 60), setter: setter.slice(0, 40) || null, grade: state.meta.grade || null, angle: state.meta.angle, holds, board: BOARD_ID }) });
+      body: JSON.stringify({ name: name.slice(0, 60), setter: setter.slice(0, 40) || null, grade: state.meta.grade || null, angle: state.meta.angle, no_match: !!state.meta.noMatch, holds, board: BOARD_ID }) });
     done.push(sig); store.set("published", done.slice(-200));
     state.meta.name = name; syncMetaInputs(); saveDraft();
     $("pubForm").hidden = true; toast(`Published “${name}” to the community`); log(`Published “${name}” (${holdsLabel(holds.length)}).`);
@@ -1848,6 +1864,7 @@ function syncMetaInputs() {
   $("climbName").value = state.meta.name;
   $("climbGrade").value = state.meta.grade;
   $("climbAngle").value = state.meta.angle;
+  $("climbNoMatch").checked = !!state.meta.noMatch;
 }
 
 /* ---------- Wiring ---------- */
@@ -1885,6 +1902,7 @@ $("copyLibBtn").addEventListener("click", () => copyText(JSON.stringify(state.li
 $("climbName").addEventListener("input", e => { state.meta.name = e.target.value; saveDraft(); });
 $("climbGrade").addEventListener("change", e => { state.meta.grade = e.target.value; saveDraft(); });
 $("climbAngle").addEventListener("change", e => { state.meta.angle = +e.target.value; saveDraft(); });
+$("climbNoMatch").addEventListener("change", e => { state.meta.noMatch = e.target.checked; saveDraft(); });
 window.addEventListener("hashchange", loadFromHash);
 $("warnClose").addEventListener("click", () => { $("warn").hidden = true; });
 document.querySelectorAll(".menu-pop button").forEach(b => b.addEventListener("click", () => b.closest("details").removeAttribute("open")));
