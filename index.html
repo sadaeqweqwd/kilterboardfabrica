@@ -8,6 +8,9 @@
 <meta name="description" content="Set any number of holds on a Kilter Original 12x12 board and light them over Bluetooth.">
 <meta name="theme-color" content="#f4f4f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0c0d0f" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23111214'/%3E%3Ccircle cx='11' cy='11' r='4' fill='%2300ff00'/%3E%3Ccircle cx='21' cy='11' r='4' fill='%23ff00ff'/%3E%3Ccircle cx='11' cy='21' r='4' fill='%2300ffff'/%3E%3Ccircle cx='21' cy='21' r='4' fill='%23ffa500'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
@@ -44,6 +47,8 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
+html{overscroll-behavior-y:none}   /* no pull-to-refresh: a stray swipe at the wall must not reload the page */
+button,summary{touch-action:manipulation;-webkit-user-select:none;user-select:none}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);font-variant-numeric:tabular-nums;padding-left:var(--gl);padding-right:var(--gr);
   padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--bg)}
@@ -117,7 +122,6 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .wrap.zoomed{overflow:auto;-webkit-overflow-scrolling:touch;max-height:72vh;overscroll-behavior:auto;border-radius:12px}
 .wrap svg{display:block;width:100%;height:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .wrap .photo{filter:var(--board-dim)}
-.wrap.paint svg{touch-action:none}
 @media (min-width:960px){.wrap.zoomed{max-height:calc(100dvh - 230px)} .wrap.fit{width:fit-content;max-width:100%;margin-inline:auto} .wrap.fit svg{height:calc(100dvh - 205px);min-height:420px;width:auto;max-width:100%}}
 .hold{cursor:pointer}
 .hold .hit{fill:transparent}
@@ -127,7 +131,6 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .halo.on{opacity:.55;filter:url(#glow)}
 /* Lit holds: translucent neon over the hold, so its shape and bolt hole stay visible; a solid neon rim keeps the colour clear */
 .hold.lit .shape{fill:var(--c);fill-opacity:.26;stroke:var(--c);stroke-opacity:.8;stroke-width:1.8}
-.hold .bolt{display:none}
 .hold.lit.bonus .shape{fill-opacity:.75;stroke:#fff;stroke-opacity:1;stroke-width:2}
 .halo.on.bonus{opacity:.95}
 
@@ -139,15 +142,26 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{display:none!important}
 
 /* Games */
-.gamebar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 8px 8px 16px}
+.gamebar{position:relative;overflow:hidden;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 8px 8px 16px}
 .gamebar .gtitle{display:grid;line-height:1.25;min-width:0}
 .gamebar b{font-size:15px}
 .gamebar #gStatus{font-size:13px;font-weight:600;color:var(--mut)}
 .gamebar .acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-left:auto}
 .gamebar .btn{min-width:88px}
-.countdown{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font:800 clamp(96px,30vw,220px)/1 var(--font);color:#fff;
-  text-shadow:0 0 24px rgba(255,196,0,.9),0 4px 30px rgba(0,0,0,.6);background:color-mix(in srgb,var(--bg) 30%,transparent)}
-.countdown.pop{animation:pop .9s ease-out}
+.gamebar .btn.icon{min-width:42px;min-height:42px;color:var(--ink)}
+.gamebar .btn.icon.primary{color:var(--accent-fg)}
+.gprog{position:absolute;left:0;right:0;bottom:0;height:3px;pointer-events:none}
+.gprog i{display:block;height:100%;width:0;background:var(--ok);transition:width .3s linear}
+.result{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;padding:24px;border:0;width:100%;cursor:pointer;
+  background:color-mix(in srgb,var(--bg) 82%,transparent);color:var(--ink);font:inherit}
+.result b{font:800 clamp(34px,9vw,56px)/1.05 var(--font)}
+.result span{font-size:16px;font-weight:600;color:var(--mut);max-width:30ch}
+.result small{font-size:12.5px;color:var(--faint);margin-top:6px}
+.glast{margin:0;font-size:12.5px;font-weight:600;color:var(--mut)}
+.countdown{position:fixed;inset:0;z-index:55;display:block;pointer-events:none;font:800 clamp(96px,30vw,220px)/1 var(--font);color:var(--ink);
+  text-shadow:0 0 28px rgba(255,196,0,.95),0 0 4px var(--bg);background:color-mix(in srgb,var(--bg) 45%,transparent)}
+.countdown span{position:absolute;left:var(--cx,50%);top:var(--cy,50%);translate:-50% -50%}   /* centred on the board, not the window */
+.countdown.pop span{animation:pop .9s ease-out}
 @keyframes pop{0%{transform:scale(1.35);opacity:0}15%{opacity:1}100%{transform:scale(.92);opacity:.9}}
 .gcard{display:grid;gap:14px}
 .glist{display:grid;gap:6px}
@@ -213,7 +227,17 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
 .lib li.cur .ttl::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:7px;vertical-align:2px}
 .lib .del.armed{color:var(--danger);width:auto;padding-inline:10px;font-size:13px;font-weight:700}
 .lib .empty{display:block;font-size:13.5px;color:var(--mut);padding:6px 6px 2px}
-.io{margin-top:10px;display:grid;gap:6px;font-size:12.5px;color:var(--mut);font-weight:600}
+.libfilter{width:100%;border:0;background:var(--soft);border-radius:10px;padding:9px 12px;min-height:40px;font:500 15px var(--font);color:var(--ink);margin-bottom:8px;outline:none}
+.libfilter:focus{box-shadow:0 0 0 2px var(--focus)}
+.pub{display:grid;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.field{width:100%;border:0;background:var(--soft);border-radius:10px;padding:10px 12px;min-height:42px;font:500 16px var(--font);color:var(--ink);outline:none}
+.field:focus{box-shadow:0 0 0 2px var(--focus)}
+.prow{display:flex;gap:8px;justify-content:flex-end}
+.cnote{margin:0;font-size:12.5px;color:var(--mut);line-height:1.45}
+#commNote{margin-top:8px}
+#commMore{width:100%;margin-top:8px}
+.io{margin-top:10px;display:grid;gap:8px;font-size:12.5px;color:var(--mut);font-weight:600}
+.io .row{display:flex;gap:8px;justify-content:flex-end}
 .io textarea{width:100%;min-height:84px;resize:vertical;background:var(--soft);border:0;border-radius:10px;padding:10px;font:12px/1.45 var(--mono);color:var(--ink)}
 
 .foot{display:grid;gap:8px;padding-inline:2px}
@@ -221,7 +245,8 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
 .foot details summary::-webkit-details-marker{display:none}
 .foot details summary::after{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translate(-1px,-1px)}
 .foot details[open] summary::after{transform:rotate(-135deg)}
-.foot p{margin:0;font-size:12.5px;color:var(--faint)}
+.foot ul{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:12.5px;color:var(--mut)}
+.foot kbd{font:600 11.5px var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:0 4px}
 #log .egg{color:transparent}
 #log .egg::selection{color:var(--ink)}
 #log{margin:8px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;height:170px;overflow:auto;font:12px/1.5 var(--mono);color:var(--mut);white-space:pre-wrap;word-break:break-word}
@@ -239,7 +264,7 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
   <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
-  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/><circle cx="12" cy="12" r="0"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
@@ -249,6 +274,11 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5-10-6.5Z"/></symbol>
+  <symbol id="i-paste" viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="15" rx="2"/><path d="M9 5V4h6v1M9.5 11h5M9.5 15h5"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5L20 16M20 20v-4h-4"/></symbol>
   <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol>
 </svg>
 
@@ -271,7 +301,8 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
 
     <div class="gamebar games-only">
       <div class="gtitle"><b id="gName">Hole in the Wall</b><span id="gStatus" role="status">Ready</span></div>
-      <div class="acts"><span class="acts" id="gActs"></span><button class="btn primary" id="gStart">Start</button></div>
+      <div class="acts"><span class="acts" id="gActs"></span><button class="btn icon" id="gPause" hidden aria-label="Pause" title="Pause (P)"><svg class="i"><use href="#i-pause"/></svg></button><button class="btn primary" id="gStart">Start</button></div>
+      <div class="gprog" aria-hidden="true"><i id="gProgBar"></i></div>
     </div>
 
     <div class="boardbar editor-only">
@@ -286,7 +317,7 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
       </div>
     </div>
 
-    <div id="wrap" class="wrap fit"><svg id="board" role="application" aria-label="Kilter board. Tap holds to set them."></svg><div id="countdown" class="countdown" hidden aria-live="assertive"></div></div>
+    <div id="wrap" class="wrap fit"><svg id="board" role="application" aria-label="Kilter board. Tap holds to set them."></svg><div id="countdown" class="countdown" hidden aria-live="assertive"></div><button id="result" class="result" hidden><b id="resultHead"></b><span id="resultText"></span><small>Tap to close</small></button></div>
   </section>
 
   <aside class="side">
@@ -303,11 +334,18 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
           <summary class="btn icon" aria-label="More climb actions" title="More"><svg class="i"><use href="#i-more"/></svg></summary>
           <div class="menu-pop">
             <button id="mirrorBtn"><svg class="i"><use href="#i-mirror"/></svg>Mirror left to right</button>
+            <button id="publishBtn"><svg class="i"><use href="#i-globe"/></svg>Publish to community</button>
             <button id="fillBtn"><svg class="i"><use href="#i-fill"/></svg>Light every hold</button>
             <hr>
             <button id="boostBtn" role="menuitemcheckbox" aria-checked="false"><svg class="i"><use href="#i-sun"/></svg>Extra-bright LEDs<span class="state"></span></button>
           </div>
         </details>
+      </div>
+      <div class="pub" id="pubForm" hidden>
+        <label class="set">Climb name<input id="pubName" class="field" maxlength="60" autocomplete="off"></label>
+        <label class="set">Your name, shown as the setter<input id="pubSetter" class="field" maxlength="40" autocomplete="nickname" placeholder="Optional"></label>
+        <p class="cnote">Everyone on this site can see and load published climbs, with its grade and angle. Once published, a climb can't be edited or removed from here.</p>
+        <div class="prow"><button class="btn" id="pubCancel">Cancel</button><button class="btn primary" id="pubGo">Publish</button></div>
       </div>
     </section>
 
@@ -318,22 +356,38 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
           <summary class="btn icon ghost" aria-label="Import and export" title="Import and export"><svg class="i"><use href="#i-more"/></svg></summary>
           <div class="menu-pop">
             <button id="importBtn"><svg class="i"><use href="#i-upload"/></svg>Import file</button>
+            <button id="pasteBtn"><svg class="i"><use href="#i-paste"/></svg>Import pasted text</button>
             <button id="copyClimbBtn"><svg class="i"><use href="#i-copy"/></svg>Copy climb as JSON</button>
             <button id="copyLibBtn"><svg class="i"><use href="#i-copy"/></svg>Copy library as JSON</button>
           </div>
         </details>
       </div>
+      <input class="libfilter" id="libFilter" type="search" placeholder="Search climbs" aria-label="Search climbs" autocomplete="off" hidden>
       <ul class="lib" id="lib"></ul>
-      <label class="io" id="ioWrap" hidden>Select and copy this text
-        <textarea id="io" readonly></textarea>
-      </label>
+      <div class="io" id="ioWrap" hidden>
+        <label for="io" id="ioLabel">Select and copy this text</label>
+        <textarea id="io" spellcheck="false"></textarea>
+        <div class="row"><button class="btn" id="ioClose">Close</button><button class="btn primary" id="ioImport">Import</button></div>
+      </div>
       <input type="file" id="file" accept=".json,application/json" hidden>
+    </section>
+
+    <section class="card editor-only" aria-label="Community climbs">
+      <div class="head">
+        <h2 class="label">Community</h2>
+        <button class="btn icon ghost" id="commRefresh" aria-label="Refresh community climbs" title="Refresh"><svg class="i"><use href="#i-refresh"/></svg></button>
+      </div>
+      <input class="libfilter" id="commSearch" type="search" placeholder="Search climbs, setters or grades" aria-label="Search community climbs" autocomplete="off">
+      <ul class="lib" id="commList"></ul>
+      <p class="cnote" id="commNote" role="status" hidden></p>
+      <button class="btn" id="commMore" hidden>Show more</button>
     </section>
 
     <section class="card gcard games-only" aria-label="Games">
       <h2 class="label">Games</h2>
       <div class="glist" id="gList" role="group" aria-label="Choose a game"></div>
       <p class="gdesc" id="gDesc"></p>
+      <p class="glast" id="gLast" hidden></p>
       <fieldset class="gsettings" id="gSettings"></fieldset>
       <label class="toggle">Sounds<input type="checkbox" id="gSound"></label>
       <p class="gnote">Every game starts with a 3-second countdown on screen and on the wall. Connect your board to play on the wall; without it the game runs on screen only.</p>
@@ -345,8 +399,22 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
         <pre id="log"><span class="egg">muie robi</span>
 </pre>
       </details>
-      <p class="editor-only">Close the Kilter app before connecting. The board updates as you edit. Keys: 1–5 roles, E erase.</p>
-      <p class="games-only">Close the Kilter app before connecting. Space or Enter starts a game. While playing, Enter, Space, → or a presentation clicker's Next press Done or Hit; ← or Back press Missed; Esc stops.</p>
+      <details>
+        <summary>Tips and shortcuts</summary>
+        <ul class="editor-only">
+          <li>Close the Kilter app before connecting. The board accepts one connection at a time.</li>
+          <li>The board updates by itself after every change.</li>
+          <li>Share links carry the climb's holds, name, grade and angle.</li>
+          <li>Keys: <kbd>1</kbd>–<kbd>5</kbd> roles, <kbd>E</kbd> erase, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo.</li>
+        </ul>
+        <ul class="games-only">
+          <li>Close the Kilter app before connecting. Without a board, games run on screen only.</li>
+          <li><kbd>Space</kbd> or <kbd>Enter</kbd> starts a game, <kbd>P</kbd> pauses, <kbd>Esc</kbd> stops.</li>
+          <li>While playing, <kbd>Enter</kbd>, <kbd>Space</kbd> or <kbd>→</kbd> press Done or Hit, and <kbd>←</kbd> presses Missed.</li>
+          <li>A Bluetooth presentation clicker works too: Next is Done or Hit, Back is Missed.</li>
+          <li>A game pauses by itself if the screen locks or you switch apps.</li>
+        </ul>
+      </details>
     </div>
   </aside>
 </div>
@@ -420,7 +488,6 @@ const state = {
   kickRows: 2,
   boost: store.get("boost", false),
   mode: "editor", override: null,
-  drag: false,
   library: store.get("library", []),
   meta: { name: "", grade: "", angle: 40 },
   zoom: 100,
@@ -434,6 +501,7 @@ function log(m) { const l = $("log"); l.append(`[${new Date().toLocaleTimeString
 let toastTimer = 0;
 function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600); }
 function haptic() { try { navigator.vibrate && navigator.vibrate(8); } catch (_) {} }
+function withTimeout(p, ms) { return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timed out")), ms))]); }
 
 /* ---------- Visibility and LED numbers ---------- */
 function isVisible(h) { return !((h.kickRow === 1 && state.kickRows < 1) || (h.kickRow === 2 && state.kickRows < 2)); }
@@ -482,6 +550,7 @@ function climbEntries() {
   for (const [id, e] of state.holds) if (isVisible(ALL[id])) out.push([ledFor(id), scaledRGB(colorOf(e))]);
   return out;
 }
+let lastSendError = -1e9;
 async function sendEntries(entries, label, quiet) {
   if (!state.chr) { if (!quiet) toast("Connect to the board first."); return false; }
   if (state.sending) { state.queued = { entries, label, quiet }; return true; }
@@ -492,7 +561,8 @@ async function sendEntries(entries, label, quiet) {
     if (!quiet) log(`${label || "Sent"}: ${entries.length} LEDs, ${bytes.length} bytes.`);
     return true;
   } catch (e) {
-    log("Update failed: " + e.message); toast("Couldn't update the board. Check the connection log.");
+    log("Update failed: " + e.message);
+    if (performance.now() - lastSendError > 5000) { lastSendError = performance.now(); toast("Couldn't update the board. Check the connection log."); }
     return false;
   } finally {
     state.sending = false;
@@ -524,6 +594,7 @@ function setConn(s) {
   $("connectBtn").classList.toggle("primary", !live);
   $("connectBtn").disabled = s === "connecting";
   $("live").hidden = !live;
+  if (state.mode === "games" && !game.running && $("gStatus").textContent.startsWith("Ready")) gameStatus(idleStatus());
 }
 function showWarn(msg) { $("warnText").textContent = msg; $("warn").hidden = false; }
 function compatCheck() {
@@ -550,6 +621,19 @@ async function attach() {
 async function connect() {
   if (!compatCheck()) return;
   setConn("connecting");
+  if (state.device) {   // the board used earlier in this visit: go straight to it, no chooser
+    try {
+      state.userDisc = false;
+      await withTimeout(attach(), 5000);
+      toast("Board reconnected."); log(`Reconnected to ${state.device.name || "the board"}.`);
+      syncBoard(); return;
+    } catch (e) {
+      log("Quick reconnect failed: " + e.message);
+      const dev = state.device; state.device = null; state.chr = null;
+      try { dev.gatt.disconnect(); } catch (_) {}
+      if (!(navigator.userActivation && navigator.userActivation.isActive)) { setConn("idle"); toast("Couldn't reach the board. Tap Connect again to pick it."); return; }
+    }
+  }
   try {
     const dev = await navigator.bluetooth.requestDevice({
       filters: [{ namePrefix: "Kilter" }, { services: [ADV_SERVICE_UUID] }],
@@ -559,28 +643,35 @@ async function connect() {
     state.api = apiLevelFromName(dev.name);
     log(`Picked ${dev.name || "unnamed board"} · LED protocol v${state.api}`);
     dev.addEventListener("gattserverdisconnected", onDisconnect);
-    await attach();
+    await withTimeout(attach(), 15000);   // never leave the button stuck on "Connecting…"
     toast("Board connected. It now updates as you edit.");
     log(`Synced ${state.holds.size} holds on connect.`);
     syncBoard();
   } catch (e) {
-    state.chr = null; setConn("idle");
+    state.chr = null; state.userDisc = true;
+    try { state.device && state.device.gatt.disconnect(); } catch (_) {}
+    setConn("idle");
     if (e.name === "NotFoundError") { log("No board chosen."); return; }
     log("Connect failed: " + e.name + ": " + e.message);
     if (e.name === "SecurityError") showWarn("Bluetooth is blocked inside this embedded view. Open the page in its own browser tab, or use your GitHub Pages link.");
-    else toast("Couldn't connect. Close the Kilter app and try again.");
+    else toast(e.message === "timed out" ? "The board didn't answer. Check it's powered on and close the Kilter app." : "Couldn't connect. Close the Kilter app and try again.");
   }
 }
+let reconnecting = false;
 async function onDisconnect() {
+  if (reconnecting) return;   // already working on it
   state.chr = null; releaseWake();
   if (state.userDisc || !state.device) { setConn("idle"); log("Disconnected."); return; }
   log("Connection dropped. Reconnecting…"); setConn("reconnecting");
-  for (let i = 1; i <= 3; i++) {
-    await sleep(700 * i);
-    if (state.userDisc) break;
-    try { await attach(); log("Reconnected."); toast("Reconnected"); syncBoard(); return; }
-    catch (e) { log(`Reconnect ${i} failed: ${e.message}`); }
-  }
+  reconnecting = true;
+  try {
+    for (let i = 1; i <= 3; i++) {
+      await sleep(700 * i);
+      if (state.userDisc || !state.device) break;
+      try { await withTimeout(attach(), 6000); log("Reconnected."); toast("Reconnected"); syncBoard(); return; }   // a board that is off never answers: don't wait forever
+      catch (e) { log(`Reconnect ${i} failed: ${e.message}`); state.chr = null; try { state.device.gatt.disconnect(); } catch (_) {} }
+    }
+  } finally { reconnecting = false; }
   setConn("idle"); toast("Lost the board. Tap Connect to try again.");
 }
 function disconnect() {
@@ -588,11 +679,19 @@ function disconnect() {
   if (state.device && state.device.gatt.connected) state.device.gatt.disconnect();
   else { state.chr = null; setConn("idle"); }
 }
+/* Keep the screen on while a board is connected or a game is running. */
 async function requestWake() {
-  try { if ("wakeLock" in navigator && state.chr && document.visibilityState === "visible") state.wake = await navigator.wakeLock.request("screen"); } catch (_) {}
+  try {
+    if (!("wakeLock" in navigator) || state.wake || document.visibilityState !== "visible" || !(state.chr || game.running)) return;
+    const w = await navigator.wakeLock.request("screen");
+    state.wake = w; w.addEventListener("release", () => { if (state.wake === w) state.wake = null; });
+  } catch (_) {}
 }
-function releaseWake() { try { state.wake && state.wake.release(); } catch (_) {} state.wake = null; }
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") requestWake(); });
+function releaseWake() { if (state.chr || game.running) return; try { state.wake && state.wake.release(); } catch (_) {} state.wake = null; }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") requestWake();
+  else if (game.running && game.t0 && !game.paused) pauseGame();   // screen locked or app switched mid-game
+});
 
 /* ---------- Editing ---------- */
 function snapshot() { return [...state.holds].map(([id, e]) => [id, e.role, e.color || null]); }
@@ -646,20 +745,23 @@ function renderBoard() {
     g.appendChild(mk("circle", { class: "hit", cx, cy, r: (reach + 5).toFixed(1) }));
     const halo = mk("circle", { class: "halo", cx, cy, r: (reach + 1).toFixed(1) }); glowLayer.appendChild(halo);
     g.appendChild(mk("path", { class: "shape", d: d + "Z" }));
-    if (h.bolt) g.appendChild(mk("circle", { class: "bolt", cx, cy, r: 2.6 }));
     holdEls.set(h.id, { g, title, halo });
     frag.appendChild(g);
   }
   svg.appendChild(frag);
   paintAll(); updateChips();
 }
+/* Repaints only the holds whose look changed since the last paint (games repaint many times a second). */
 function paintAll() {
+  const ov = state.override, strong = !!ov && state.mode === "games" && !!curGame().strong;
   for (const [id, el] of holdEls) {
-    const e = state.override ? null : state.holds.get(id);
-    const c = state.override ? state.override.get(id) : (e ? colorOf(e) : null);
-    el.g.classList.toggle("lit", !!c);
-    el.halo.classList.toggle("on", !!c);
-    const bonus = !!state.override && (c === BONUS_YELLOW || (state.mode === "games" && !!curGame().strong));
+    const e = ov ? null : state.holds.get(id);
+    const c = ov ? (ov.get(id) || null) : (e ? colorOf(e) : null);
+    const bonus = !!c && !!ov && (c === BONUS_YELLOW || strong);
+    const sig = c ? c + (bonus ? "!" : "") + (e ? e.role : "") : "";
+    if (sig === el.sig) continue;
+    el.sig = sig;
+    el.g.classList.toggle("lit", !!c); el.halo.classList.toggle("on", !!c);
     el.g.classList.toggle("bonus", bonus); el.halo.classList.toggle("bonus", bonus);
     if (c) { el.g.style.setProperty("--c", c); el.halo.style.setProperty("--c", c); }
     else { el.g.style.removeProperty("--c"); el.halo.style.removeProperty("--c"); }
@@ -687,7 +789,7 @@ function paintAt(e) {
 $("board").addEventListener("pointerdown", e => {
   if (e.button > 0 || state.mode !== "editor") return;
   ptr.down = true; ptr.x = e.clientX; ptr.y = e.clientY; ptr.startId = holdAt(e.clientX, e.clientY);
-  ptr.painting = e.pointerType === "mouse" || state.drag;
+  ptr.painting = e.pointerType === "mouse";   // a mouse paints by dragging; touch taps holds and scrolls a zoomed board
   if (ptr.painting) {
     pushUndo(); ptr.mode = null; ptr.seen = new Set();
     $("board").setPointerCapture(e.pointerId);
@@ -782,50 +884,71 @@ function fillAll() {
   for (const h of visibleHolds()) state.holds.set(h.id, { ...e });
   afterChange(); toast(`All ${visibleHolds().length} holds set`);
 }
-let clearArmed = 0;
 function clearHolds() {
   if (!state.holds.size) return;
   pushUndo(); state.holds.clear(); afterChange(); toast("All holds erased. Undo brings them back.");
 }
 
-/* ---------- Share links ---------- */
+/* ---------- Share links ----------
+   #c<holds>[-g<grade><angle>][-n<name as hex>]. Only letters, digits and hyphens, so the link survives everywhere.
+   Holds: 2 base-36 chars for the hold + a role letter (or x + 6 hex digits for a custom colour). */
+const hexText = {
+  enc: t => [...new TextEncoder().encode(t)].map(b => b.toString(16).padStart(2, "0")).join(""),
+  dec: h => new TextDecoder().decode(new Uint8Array((h.match(/../g) || []).map(x => parseInt(x, 16))))
+};
 function encodeClimb() {
   let s = "c";
   for (const [id, e] of [...state.holds].sort((a, b) => a[0] - b[0])) {
     s += id.toString(36).padStart(2, "0");
     s += e.role === "custom" ? "x" + e.color.slice(1).toLowerCase() : ROLE_CODE[e.role];
   }
+  s += "-g" + (GRADES.indexOf(state.meta.grade) + 1).toString(36).padStart(2, "0") + Math.round(state.meta.angle / 5).toString(36);
+  const name = state.meta.name.trim().slice(0, 60);
+  if (name) s += "-n" + hexText.enc(name);
   return s;
 }
 function decodeClimb(code) {
-  if (!/^c[0-9a-z]*$/.test(code)) return null;
-  const m = new Map(); let i = 1;
-  while (i < code.length) {
-    const id = parseInt(code.slice(i, i + 2), 36); i += 2;
-    const r = code[i++];
+  const [body, ...extra] = code.split("-");
+  if (!/^c[0-9a-z]*$/.test(body)) return null;
+  const holds = new Map(); let i = 1;
+  while (i < body.length) {
+    const id = parseInt(body.slice(i, i + 2), 36); i += 2;
+    const r = body[i++];
     if (!(id >= 0 && id < ALL.length)) return null;
     if (r === "x") {
-      const hex = code.slice(i, i + 6); i += 6;
+      const hex = body.slice(i, i + 6); i += 6;
       if (!/^[0-9a-f]{6}$/.test(hex)) return null;
-      m.set(id, { role: "custom", color: "#" + hex.toUpperCase() });
-    } else if (CODE_ROLE[r]) m.set(id, { role: CODE_ROLE[r] });
+      holds.set(id, { role: "custom", color: "#" + hex.toUpperCase() });
+    } else if (CODE_ROLE[r]) holds.set(id, { role: CODE_ROLE[r] });
     else return null;
   }
-  return m;
+  let meta = null;
+  for (const x of extra) {
+    if (/^g[0-9a-z]{3}$/.test(x)) {
+      const angle = parseInt(x[3], 36) * 5;
+      meta = Object.assign(meta || {}, { grade: GRADES[parseInt(x.slice(1, 3), 36) - 1] || "", angle: ANGLES.includes(angle) ? angle : 40 });
+    } else if (/^n([0-9a-f]{2})+$/.test(x)) {
+      try { meta = Object.assign(meta || {}, { name: hexText.dec(x.slice(1)).slice(0, 60) }); } catch (_) {}
+    }
+  }
+  return { holds, meta };
 }
 function loadFromHash() {
   const h = location.hash.slice(1);
   if (!h || h[0] !== "c") return false;
-  const m = decodeClimb(h);
-  if (!m) { toast("That share link is damaged."); return false; }
+  const d = decodeClimb(h);
+  if (!d) { toast("That share link is damaged."); return false; }
   if (state.mode !== "editor") setMode("editor", true);
-  pushUndo(); state.holds = m; afterChange(); toast(`Loaded a shared climb with ${m.size} holds`);
+  pushUndo(); state.holds = d.holds;
+  if (d.meta) { state.meta = { name: d.meta.name || "", grade: d.meta.grade || "", angle: d.meta.angle ?? 40 }; syncMetaInputs(); renderLibrary(); }
+  afterChange();
+  toast(d.meta && d.meta.name ? `Loaded “${d.meta.name}”` : `Loaded a shared climb with ${d.holds.size} holds`);
   return true;
 }
 async function copyText(text, okMsg) {
   try { await navigator.clipboard.writeText(text); toast(okMsg); }
   catch (_) {
-    const io = $("io"); io.value = text; $("ioWrap").hidden = false; io.focus(); io.select();
+    openIO("copy", text);
     toast("Copy blocked. Select the text under your library.");
   }
 }
@@ -855,13 +978,22 @@ function loadClimb(c) {
   toast(`Loaded “${state.meta.name || "climb"}”`);
 }
 function renderLibrary() {
-  const ul = $("lib"); ul.textContent = "";
+  const ul = $("lib"), filter = $("libFilter"); ul.textContent = "";
+  filter.hidden = state.library.length < 6;   // search appears once the list is long enough to need it
+  if (filter.hidden) filter.value = "";
   if (!state.library.length) {
     const li = document.createElement("li"); li.className = "empty";
     li.textContent = "Saved climbs show up here.";
     ul.appendChild(li); return;
   }
-  state.library.forEach((c, i) => {
+  const q = filter.value.trim().toLowerCase();
+  const shown = state.library.filter(c => !q || `${c.name} ${c.grade || ""}`.toLowerCase().includes(q));
+  if (!shown.length) {
+    const li = document.createElement("li"); li.className = "empty";
+    li.textContent = `No climbs match “${filter.value.trim()}”.`;
+    ul.appendChild(li); return;
+  }
+  for (const c of shown) {
     const li = document.createElement("li");
     if (c.name === state.meta.name) li.className = "cur";
     const open = document.createElement("button"); open.className = "open"; open.title = `Open “${c.name}”`;
@@ -873,12 +1005,16 @@ function renderLibrary() {
     const del = document.createElement("button"); del.className = "btn icon ghost del"; del.setAttribute("aria-label", `Delete “${c.name}”`);
     del.innerHTML = '<svg class="i"><use href="#i-trash"/></svg>';
     del.addEventListener("click", () => {
-      if (del.classList.contains("armed")) { state.library.splice(i, 1); saveLibrary(); renderLibrary(); toast(`Deleted “${c.name}”`); return; }
+      if (del.classList.contains("armed")) {
+        const i = state.library.indexOf(c);
+        if (i >= 0) state.library.splice(i, 1);
+        saveLibrary(); renderLibrary(); toast(`Deleted “${c.name}”`); return;
+      }
       del.classList.add("armed"); del.textContent = "Delete";
       setTimeout(() => { if (del.isConnected) { del.classList.remove("armed"); del.innerHTML = '<svg class="i"><use href="#i-trash"/></svg>'; } }, 3000);
     });
     li.append(open, del); ul.appendChild(li);
-  });
+  }
 }
 function climbJSON() { return { v: 2, name: state.meta.name, grade: state.meta.grade, angle: state.meta.angle, holds: snapshot() }; }
 function roleFromColor(hex) {
@@ -901,19 +1037,134 @@ function normalizeClimb(c) {
   }
   return null;
 }
-async function importFile(f) {
+/* Imports one climb or a whole library from JSON text (a file's contents or pasted text). */
+function importText(text) {
   try {
-    const data = JSON.parse(await f.text());
+    const data = JSON.parse(text);
     if (Array.isArray(data)) {
       const climbs = data.map(normalizeClimb).filter(Boolean);
+      if (!climbs.length) throw new Error("No climbs found in that text.");
       for (const c of climbs) { c.updated = Date.now(); const i = state.library.findIndex(x => x.name === c.name); if (i >= 0) state.library[i] = c; else state.library.push(c); }
-      saveLibrary(); renderLibrary(); toast(`Imported ${climbs.length} climbs`);
+      saveLibrary(); renderLibrary(); toast(`Imported ${climbs.length} climb${climbs.length === 1 ? "" : "s"}`);
     } else {
-      const c = normalizeClimb(data);
-      if (!c) throw new Error("No holds found in that file.");
+      const c = data && normalizeClimb(data);
+      if (!c) throw new Error("No holds found in that text.");
       loadClimb(c);
     }
-  } catch (e) { toast("Import failed: " + e.message); log("Import failed: " + e.message); }
+    return true;
+  } catch (e) {
+    const msg = e instanceof SyntaxError ? "That isn't valid climb or library JSON." : e.message;
+    toast("Import failed. " + msg); log("Import failed: " + e.message);
+    return false;
+  }
+}
+async function importFile(f) { importText(await f.text()); }
+/* The text box under the library: shows text to copy when the clipboard is blocked, or takes pasted JSON to import. */
+function openIO(mode, text) {
+  const io = $("io"), paste = mode === "paste";
+  $("ioLabel").textContent = paste ? "Paste a climb or a whole library (the text from Copy as JSON)" : "Select and copy this text";
+  io.readOnly = !paste; io.value = text || ""; io.placeholder = paste ? '{"name": "…", "holds": […]}' : "";
+  $("ioImport").hidden = !paste; $("ioWrap").hidden = false;
+  io.focus(); if (!paste) io.select();
+  $("ioWrap").scrollIntoView({ block: "nearest" });
+}
+
+/* ---------- Community climbs (shared online in Supabase) ----------
+   Anyone on the site can read and add climbs; the database rules allow nothing else (no edits, no deletes).
+   Holds are stored as the board's LED numbers, so they mean the same thing on every Original 12x12 with kickboard. */
+const SB_URL = "https://bvqtsrwitaicrhypcaws.supabase.co";
+const SB_KEY = "sb_publishable_7d4p8UVP5Axc9PXJ6fp5HQ_zn09Vnlu";   // publishable key: made to live in a web page
+const BOARD_ID = "original-12x12-kick";
+const COMM_PAGE = 30;
+const comm = { items: [], offset: 0, q: "", done: false, token: 0, timer: 0 };
+async function sb(path, opts = {}) {
+  const res = await withTimeout(fetch(SB_URL + "/rest/v1/" + path, { ...opts, headers: { apikey: SB_KEY, "Content-Type": "application/json", ...(opts.headers || {}) } }), 12000);
+  const text = await res.text();
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch (_) {}
+  if (!res.ok) { const err = new Error((data && (data.message || data.hint)) || `HTTP ${res.status}`); err.code = data && data.code; err.status = res.status; throw err; }
+  return data;
+}
+function commError(e) {
+  if (e.code === "PGRST205" || e.code === "42P01" || /does not exist|schema cache/i.test(e.message)) return "The community table isn't set up in the database yet.";
+  if (e.code === "23514" || e.code === "22P02") return "The database didn't accept that climb.";
+  if (e.status === 401 || e.status === 403 || e.code === "42501") return "The database refused the request. Check its access rules.";
+  if (e.message === "timed out" || e instanceof TypeError) return "Couldn't reach the community list. You may be offline, or the database is waking up; try again in a minute.";
+  return "Community list error: " + e.message;
+}
+const holdsLabel = n => `${n} hold${n === 1 ? "" : "s"}`;
+async function loadCommunity(reset) {
+  if (reset) { comm.items = []; comm.offset = 0; comm.done = false; }
+  const token = ++comm.token;
+  renderCommunity("Loading…");
+  try {
+    let q = `climbs?select=id,created_at,name,setter,grade,angle,holds&board=eq.${BOARD_ID}&order=created_at.desc&offset=${comm.offset}&limit=${COMM_PAGE}`;
+    const term = comm.q.replace(/["\\,()*]/g, " ").replace(/\s+/g, " ").trim();
+    if (term) q += "&or=" + encodeURIComponent(`(name.ilike."*${term}*",setter.ilike."*${term}*",grade.ilike."*${term}*")`);
+    const rows = await sb(q);
+    if (token !== comm.token) return;
+    comm.items.push(...rows); comm.offset += rows.length; comm.done = rows.length < COMM_PAGE;
+    renderCommunity();
+  } catch (e) {
+    if (token !== comm.token) return;
+    log("Community: " + e.message); renderCommunity(commError(e));
+  }
+}
+function renderCommunity(msg) {
+  const ul = $("commList"); ul.textContent = "";
+  for (const c of comm.items) {
+    const li = document.createElement("li");
+    const open = document.createElement("button"); open.className = "open"; open.title = `Open “${c.name}”`;
+    const ttl = document.createElement("span"); ttl.className = "ttl"; ttl.textContent = c.name;
+    const sub = document.createElement("span"); sub.className = "sub";
+    const when = new Date(c.created_at);
+    sub.textContent = [c.grade || "No grade", `${c.angle ?? 40}°`, holdsLabel((c.holds || []).length), c.setter ? "by " + c.setter : "", isNaN(when) ? "" : when.toLocaleDateString()].filter(Boolean).join(" · ");
+    open.append(ttl, sub);
+    open.addEventListener("click", () => openCommunity(c));
+    li.append(open); ul.appendChild(li);
+  }
+  if (!comm.items.length && !msg) {
+    const li = document.createElement("li"); li.className = "empty";
+    li.textContent = comm.q.trim() ? `No community climbs match “${comm.q.trim()}”.` : "No community climbs yet. Publish yours from the ⋯ menu on your climb.";
+    ul.appendChild(li);
+  }
+  $("commNote").textContent = msg || ""; $("commNote").hidden = !msg;
+  $("commMore").hidden = !!msg || comm.done || !comm.items.length;
+}
+function openCommunity(c) {
+  const holds = (Array.isArray(c.holds) ? c.holds : []).map(h => {
+    if (!Array.isArray(h)) return null;
+    const id = LED_TO_ID.get(+h[0]), role = String(h[1]), color = h[2] ? String(h[2]).toUpperCase() : null;
+    if (id === undefined) return null;
+    if (role in ROLES) return [id, role, null];
+    return role === "custom" && /^#[0-9A-F]{6}$/.test(color || "") ? [id, role, color] : null;
+  }).filter(Boolean);
+  loadClimb({ name: String(c.name || "").slice(0, 60), grade: GRADES.includes(c.grade) ? c.grade : "", angle: ANGLES.includes(+c.angle) ? +c.angle : 40, holds });
+  toast(`Loaded “${c.name}”${c.setter ? " by " + c.setter : ""}. Save it to keep it in your library.`);
+  if (window.matchMedia("(max-width: 959px)").matches) $("wrap").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function openPublish() {
+  if (!state.holds.size) { toast("Set some holds first."); return; }
+  $("pubName").value = state.meta.name; $("pubSetter").value = store.get("setter", "");
+  $("pubForm").hidden = false; $("pubName").focus();
+}
+async function publishClimb() {
+  const name = $("pubName").value.trim(), setter = $("pubSetter").value.trim(), btn = $("pubGo");
+  if (!name) { toast("Give the climb a name first."); $("pubName").focus(); return; }
+  if (!state.holds.size) { toast("Set some holds first."); return; }
+  store.set("setter", setter);
+  const holds = [...state.holds].map(([id, e]) => [ALL[id].led, e.role, e.role === "custom" ? e.color : null]).sort((a, b) => a[0] - b[0]);
+  const sig = JSON.stringify([name.toLowerCase(), holds]), done = store.get("published", []);
+  if (done.includes(sig)) { toast("You've already published this climb."); return; }
+  btn.disabled = true; btn.textContent = "Publishing…";
+  try {
+    await sb("climbs", { method: "POST", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ name: name.slice(0, 60), setter: setter.slice(0, 40) || null, grade: state.meta.grade || null, angle: state.meta.angle, holds, board: BOARD_ID }) });
+    done.push(sig); store.set("published", done.slice(-200));
+    state.meta.name = name; syncMetaInputs(); saveDraft();
+    $("pubForm").hidden = true; toast(`Published “${name}” to the community`); log(`Published “${name}” (${holdsLabel(holds.length)}).`);
+    comm.q = ""; $("commSearch").value = ""; loadCommunity(true);
+  } catch (e) { toast(commError(e)); log("Publish failed: " + e.message); }
+  finally { btn.disabled = false; btn.textContent = "Publish"; }
 }
 
 /* ---------- Modes: editor / games ---------- */
@@ -926,6 +1177,7 @@ function setMode(m, quiet) {
   $("tabGames").setAttribute("aria-selected", String(m === "games"));
   $("board").setAttribute("aria-label", m === "editor" ? "Kilter board. Tap holds to set them." : "Kilter board game view.");
   state.override = m === "games" ? curGame().preview(curOpts()) : null;
+  hideResult(); if (m === "games") gameStatus(idleStatus());
   paintAll();
   if (!quiet) syncBoard();
 }
@@ -1077,6 +1329,7 @@ GAMES.hitw = {
     const shown = Math.min(s.lines.length, total);
     return {
       frame, done: total !== Infinity && passed >= total,
+      progress: total === Infinity ? undefined : t / ((total - 1) * every + SPEEDS[o.speed - 1]),
       status: (total === Infinity ? `Line ${shown} · ${passed} passed` : `Line ${shown} of ${total}`) + (s.bonus !== null ? " · Bonus hold lit" : "")
     };
   },
@@ -1200,7 +1453,7 @@ GAMES.treadmill = {
     const frame = new Map([[s.path[k + 1], COL.blue], [s.path[k], COL.cyan]]);
     let beep; if (k !== s.lastK) { if (s.lastK >= 0) beep = "tick"; s.lastK = k; }
     const left = Math.max(0, total - t), mm = Math.floor(left / 60), ss = Math.floor(left % 60);
-    return { frame, beep, done: t >= total, status: `${mm}:${String(ss).padStart(2, "0")} left · ${k} moves` };
+    return { frame, beep, done: t >= total, progress: t / total, status: `${mm}:${String(ss).padStart(2, "0")} left · ${k} moves` };
   },
   summary: (s, o) => `Finished · ${o.minutes} min · ${Math.max(0, s.lastK)} moves`,
   preview(o) { return withSeed(11, () => { const s = GAMES.treadmill.init(o); s.path.push(treadNext(s, o)); return new Map([[s.path[1], COL.blue], [s.path[0], COL.cyan]]); }); }
@@ -1237,17 +1490,17 @@ GAMES.reaction = {
       frame.set(s.targets[i].id, s.targets[i].color);
       let beep; if (i !== s.lastI) { s.lastI = i; beep = "tick"; }
       s.i = i + 1;
-      return { frame, beep, status: `Target ${i + 1} of ${n}` };
+      return { frame, beep, progress: t / (n * +o.interval), status: `Target ${i + 1} of ${n}` };
     }
     if (s.i >= n) return { frame, done: true, status: "" };
     const last = s.times.length ? ` · last ${s.times[s.times.length - 1].toFixed(2)} s` : "", hit = [{ act: "next", label: "Hit", primary: true }];
     let beep;
     if (s.phase === "wait") {
-      if (t - s.t < s.wait) return { frame, status: `Get ready · ${s.i + 1} of ${n}${last}`, buttons: hit };
+      if (t - s.t < s.wait) return { frame, progress: s.i / n, status: `Get ready · ${s.i + 1} of ${n}${last}`, buttons: hit };
       s.targets.push(reactNext(s, o)); s.phase = "lit"; s.t = t; beep = "tick";
     }
     const tg = s.targets[s.targets.length - 1]; frame.set(tg.id, tg.color);
-    return { frame, beep, status: `Target ${s.i + 1} of ${n}${last}`, buttons: hit };
+    return { frame, beep, progress: s.i / n, status: `Target ${s.i + 1} of ${n}${last}`, buttons: hit };
   },
   act(s, o, kind, t) {
     if (o.advance !== "press" || kind !== "next" || s.phase !== "lit") return;
@@ -1301,7 +1554,7 @@ GAMES.feet = {
     let beep;
     while (s.lastK < k) { if (s.lastK >= 0) { feetStep(s, o); s.n++; beep = "tick"; } s.lastK++; }
     const frame = o.feet === "one" ? new Map([[s.one, COL.orange]]) : new Map([[s.L, COL.orange], [s.R, COL.cyan]]);
-    return { frame, beep, status: `Placement ${k + 1} of ${total}` };
+    return { frame, beep, progress: t / (total * +o.interval), status: `Placement ${k + 1} of ${total}` };
   },
   summary: (s, o) => `Finished · ${o.count} placements`,
   preview(o) { return withSeed(4, () => { const s = GAMES.feet.init(o); return o.feet === "one" ? new Map([[s.one, COL.orange]]) : new Map([[s.L, COL.orange], [s.R, COL.cyan]]); }); }
@@ -1335,7 +1588,7 @@ GAMES.lockoff = {
     else { phase = "lock"; frame.set(s.cur, BONUS_YELLOW); msg = "Lock off"; }   // only reached by floating-point rounding at the very end
     let beep; const pk = rep + phase;
     if (pk !== s.lastPhase) { if (phase === "lock") beep = "go"; else if (phase === "reach" && s.lastPhase) beep = "tick"; s.lastPhase = pk; }
-    return { frame, beep, status: `Rep ${rep + 1} of ${reps} · ${msg}` };
+    return { frame, beep, progress: t / (per * reps), status: `Rep ${rep + 1} of ${reps} · ${msg}` };
   },
   summary: (s, o) => `Finished · ${o.reps} reps of ${o.lock} s`,
   preview() { return withSeed(3, () => new Map([[lockStart(), COL.green]])); }
@@ -1343,7 +1596,7 @@ GAMES.lockoff = {
 
 /* ================= Game runner (shared by every game) ================= */
 const game = {
-  running: false, token: 0, timer: 0, t0: 0, key: "", actx: null, s: null, btnSig: "",
+  running: false, paused: false, resuming: false, pausedAt: 0, token: 0, timer: 0, t0: 0, key: "", actx: null, s: null, btnSig: "", resultTimer: 0,
   sel: store.get("gameSel", "hitw"), sound: store.get("gameSound", store.get("hitw", {}).sound !== false), opts: {}
 };
 function curGame() { return GAMES[game.sel] || GAMES.hitw; }
@@ -1387,8 +1640,23 @@ function beep(kind) {
     o.connect(g).connect(a.destination); o.start(t); o.stop(t + len + 0.02);
   } catch (_) {}
 }
-function gameStatus(t) { $("gStatus").textContent = t; }
-function showCountdown(txt) { const c = $("countdown"); c.textContent = txt; c.hidden = !txt; c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop"); }
+function gameStatus(t) { const el = $("gStatus"); if (el.textContent !== t) el.textContent = t; }
+function idleStatus() { return state.chr ? "Ready" : "Ready · no board connected, plays on screen"; }
+function setProgress(p) { $("gProgBar").style.width = (p === undefined ? 0 : Math.max(0, Math.min(1, p)) * 100).toFixed(1) + "%"; }
+function showCountdown(txt) { const c = $("countdown"), n = document.createElement("span"); n.textContent = txt; c.replaceChildren(n); c.hidden = !txt;
+  const r = $("wrap").getBoundingClientRect(); c.style.setProperty("--cx", (r.left + r.width / 2) + "px"); c.style.setProperty("--cy", (Math.max(0, r.top) + Math.min(innerHeight, r.bottom)) / 2 + "px");
+  c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop"); }   // only the number animates; the dimmed layer stays full-screen
+function showResult(msg) {
+  const parts = msg.split(" · ");
+  $("resultHead").textContent = parts.shift(); $("resultText").textContent = parts.join(" · ");
+  $("result").hidden = false;
+  clearTimeout(game.resultTimer); game.resultTimer = setTimeout(hideResult, 8000);
+}
+function hideResult() { clearTimeout(game.resultTimer); $("result").hidden = true; }
+function showLast() {
+  const last = store.get("last." + game.sel, ""), el = $("gLast");
+  el.hidden = !last; el.textContent = last ? "Last game: " + last.replace(/^Finished · /, "") : "";
+}
 function setButtons(list) {
   const sig = list.map(b => b.act + b.label).join("|");
   if (sig === game.btnSig) return;
@@ -1402,68 +1670,99 @@ function setButtons(list) {
   }
 }
 function setGameUI() {
-  const run = game.running;
+  const run = game.running, p = $("gPause");
   $("gStart").textContent = run ? "Stop" : "Start";
   $("gStart").classList.toggle("primary", !run);
+  p.hidden = !(run && game.t0);
+  p.setAttribute("aria-label", game.paused ? "Resume" : "Pause"); p.title = game.paused ? "Resume (P)" : "Pause (P)";
+  p.querySelector("use").setAttribute("href", game.paused ? "#i-play" : "#i-pause");
+  p.classList.toggle("primary", game.paused);
   $("gSettings").disabled = run;
   document.querySelectorAll("#gList .gtile").forEach(b => { b.disabled = run; });
   if (!run) setButtons([]);
 }
 
-async function startGame() {
-  if (game.running) { stopGame(); return; }
-  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();   // so a clicker's Enter/Space can't hit Stop
-  ensureAudio();
-  const G = curGame(), o = curOpts(), token = ++game.token;
-  game.running = true; game.key = ""; game.t0 = 0; game.s = G.init(o);
-  setGameUI(); requestWake(); log(`${G.name} started.`);
+/* 3-2-1 on screen and on the wall. Resolves false if the game was stopped meanwhile. */
+async function countdown(token, label) {
   for (const n of [3, 2, 1]) {
-    if (token !== game.token) return;
-    gameStatus(`Starting in ${n}…`); showCountdown(String(n)); beep("count");
+    if (token !== game.token) return false;
+    gameStatus(`${label} in ${n}…`); showCountdown(String(n)); beep("count");
     state.override = digitFrame(n); pushGameFrame();
     await sleep(1000);
   }
-  if (token !== game.token) return;
+  if (token !== game.token) return false;
   beep("go"); showCountdown("Go!"); setTimeout(() => { if (token === game.token) showCountdown(""); }, 650);
-  state.override = new Map(); game.key = ""; pushGameFrame();
-  game.t0 = performance.now();
+  return true;
+}
+function runLoop(token) {
+  game.key = "\u0000";   // forces the first frame out, which also clears the countdown digits
+  setGameUI();
   game.timer = setInterval(() => step(token), 30);
   step(token);
 }
+async function startGame() {
+  if (game.running) { stopGame(); return; }
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();   // so a clicker's Enter/Space can't hit Stop
+  ensureAudio(); hideResult();
+  const G = curGame(), o = curOpts(), token = ++game.token;
+  game.running = true; game.paused = false; game.resuming = false; game.t0 = 0; game.s = G.init(o);
+  setGameUI(); setProgress(0); requestWake(); log(`${G.name} started.`);
+  if (!(await countdown(token, "Starting"))) return;
+  game.t0 = performance.now();
+  runLoop(token);
+}
 function step(token) {
-  if (token !== game.token || !game.t0) return;
+  if (token !== game.token || !game.t0 || game.paused) return;
   const t = (performance.now() - game.t0) / 1000;
   const r = curGame().tick(game.s, curOpts(), t);
   if (r.done) { finishGame(); return; }
   gameStatus(r.status);
   setButtons(r.buttons || []);
+  setProgress(r.progress);
   if (r.beep) beep(r.beep);
   const key = [...r.frame].map(([id, c]) => id + c).join(",");
   if (key !== game.key) { game.key = key; state.override = r.frame; pushGameFrame(); }
 }
 function act(kind, id) {
-  if (!game.running || !game.t0) return;
+  if (!game.running || !game.t0 || game.paused) return;
   const G = curGame();
   if (!G.act) return;
   G.act(game.s, curOpts(), kind, (performance.now() - game.t0) / 1000, id);
   step(game.token);
 }
+/* Pause freezes the game clock and leaves the wall as it is. Resume counts 3-2-1 again so you can get back on. */
+function pauseGame() {
+  if (!game.running || !game.t0 || game.paused) return;
+  game.paused = true; game.pausedAt = performance.now(); clearInterval(game.timer);
+  gameStatus("Paused"); setButtons([]); setGameUI();
+}
+async function resumeGame() {
+  if (!game.running || !game.paused || game.resuming) return;
+  game.resuming = true;
+  const token = game.token, ok = await countdown(token, "Resuming");
+  game.resuming = false;
+  if (!ok || !game.paused) return;
+  game.t0 += performance.now() - game.pausedAt; game.paused = false;
+  runLoop(token);
+}
+function togglePause() { if (game.paused) resumeGame(); else pauseGame(); }
 function finishGame() {
   clearInterval(game.timer); game.token++;
   const G = curGame(), msg = G.summary ? G.summary(game.s, curOpts()) : "Finished";
-  game.running = false; game.t0 = 0;
+  game.running = false; game.paused = false; game.t0 = 0;
   state.override = new Map(); pushGameFrame();
-  gameStatus(msg); toast(msg); beep("end"); log(`${G.name}: ${msg}`);
-  setGameUI();
+  gameStatus(msg); setProgress(1); showResult(msg); beep("end"); log(`${G.name}: ${msg}`);
+  store.set("last." + game.sel, msg); showLast();
+  setGameUI(); releaseWake();
   setTimeout(() => { if (!game.running && state.mode === "games") { state.override = curGame().preview(curOpts()); paintAll(); } }, 1500);
 }
 function stopGame(silent) {
   clearInterval(game.timer); game.token++;
   const was = game.running;
-  game.running = false; game.t0 = 0; showCountdown("");
+  game.running = false; game.paused = false; game.resuming = false; game.t0 = 0; showCountdown("");
   if (was && state.chr) sendEntries([], "Game stopped", true);
   if (state.mode === "games") { state.override = curGame().preview(curOpts()); paintAll(); }
-  gameStatus(silent ? "Ready" : "Stopped"); setGameUI();
+  gameStatus(silent ? idleStatus() : "Stopped"); setProgress(0); setGameUI(); releaseWake();
 }
 
 /* ---------- Games panel ---------- */
@@ -1516,7 +1815,7 @@ function selectGame(id) {
   $("gName").textContent = G.name; $("gDesc").textContent = G.desc;
   const fs = $("gSettings"); fs.textContent = "";
   for (const c of G.settings) fs.appendChild(settingControl(c));
-  syncGameSettings(); gameStatus("Ready");
+  syncGameSettings(); gameStatus(idleStatus()); setProgress(0); hideResult(); showLast();
 }
 function buildGames() {
   loadGameOpts();
@@ -1528,6 +1827,8 @@ function buildGames() {
     list.appendChild(b);
   }
   $("gStart").addEventListener("click", e => { e.currentTarget.blur(); startGame(); });
+  $("gPause").addEventListener("click", e => { e.currentTarget.blur(); togglePause(); });
+  $("result").addEventListener("click", hideResult);
   $("gSound").addEventListener("change", e => { game.sound = e.target.checked; store.set("gameSound", game.sound); });
   $("tabEditor").addEventListener("click", () => setMode("editor"));
   $("tabGames").addEventListener("click", () => setMode("games"));
@@ -1567,6 +1868,18 @@ $("boostBtn").addEventListener("click", () => {
 $("eraseAllBtn").addEventListener("click", clearHolds);
 $("importBtn").addEventListener("click", () => { $("file").value = ""; $("file").click(); });
 $("file").addEventListener("change", e => { const f = e.target.files[0]; if (f) importFile(f); });
+$("pasteBtn").addEventListener("click", () => openIO("paste"));
+$("ioClose").addEventListener("click", () => { $("ioWrap").hidden = true; });
+$("ioImport").addEventListener("click", () => { const t = $("io").value.trim(); if (!t) { toast("Paste the copied text first."); return; } if (importText(t)) $("ioWrap").hidden = true; });
+$("libFilter").addEventListener("input", renderLibrary);
+$("publishBtn").addEventListener("click", openPublish);
+$("pubCancel").addEventListener("click", () => { $("pubForm").hidden = true; });
+$("pubGo").addEventListener("click", publishClimb);
+$("pubName").addEventListener("keydown", e => { if (e.key === "Enter") publishClimb(); });
+$("pubSetter").addEventListener("keydown", e => { if (e.key === "Enter") publishClimb(); });
+$("commRefresh").addEventListener("click", () => loadCommunity(true));
+$("commMore").addEventListener("click", () => loadCommunity(false));
+$("commSearch").addEventListener("input", e => { comm.q = e.target.value; clearTimeout(comm.timer); comm.timer = setTimeout(() => loadCommunity(true), 350); });
 $("copyClimbBtn").addEventListener("click", () => copyText(JSON.stringify(climbJSON(), null, 1), "Climb JSON copied"));
 $("copyLibBtn").addEventListener("click", () => copyText(JSON.stringify(state.library, null, 1), `Library copied (${state.library.length} climbs)`));
 $("climbName").addEventListener("input", e => { state.meta.name = e.target.value; saveDraft(); });
@@ -1584,6 +1897,8 @@ document.addEventListener("keydown", e => {
   if (state.mode === "games") {
     if (k === "escape") { if (game.running) stopGame(); return; }
     if (!game.running) { if ((k === " " || k === "enter") && !e.target.closest("button,summary")) { e.preventDefault(); startGame(); } return; }
+    if (k === "p") { togglePause(); return; }
+    if (game.paused) { if ([" ", "enter", "pagedown", "arrowright"].includes(k)) { e.preventDefault(); resumeGame(); } return; }
     if ([" ", "enter", "pagedown", "arrowright", "arrowdown"].includes(k)) { e.preventDefault(); act("next"); return; }
     if (["pageup", "arrowleft", "arrowup", "backspace"].includes(k)) { e.preventDefault(); act("miss"); return; }
     return;
@@ -1598,7 +1913,6 @@ document.addEventListener("keydown", e => {
 /* ---------- Boot ---------- */
 (function boot() {
   buildTools(); buildMeta(); syncBoostUI();
-  $("wrap").classList.toggle("paint", state.drag);
   const draft = store.get("draft", null);
   if (draft) { restore(draft.holds || []); state.meta = Object.assign(state.meta, draft.meta || {}); }
   syncMetaInputs();
@@ -1609,6 +1923,7 @@ document.addEventListener("keydown", e => {
   state.undo = []; $("undoBtn").disabled = true; $("redoBtn").disabled = true;
   compatCheck();
   log(`Ready. ${ALL.length} holds loaded. No hold limit.`);
+  loadCommunity(true);
 })();
 </script>
 </body>
