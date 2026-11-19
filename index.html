@@ -111,7 +111,10 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .tool .sw.erase{background:transparent;box-shadow:inset 0 0 0 1.5px var(--faint)}
 
 .boardbar{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:38px}
-.total{font-size:13px;font-weight:600;color:var(--mut);padding-left:4px;display:flex;align-items:center;gap:8px}
+.total{font-size:13px;font-weight:600;color:var(--mut);padding-left:4px;display:flex;align-items:center;gap:8px;min-width:0}
+.ctitle{display:flex;align-items:baseline;gap:8px;min-width:0}
+.ctitle b{font-size:16px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ctitle span{font-size:12px;font-weight:500;color:var(--mut);white-space:nowrap}
 .live{display:inline-flex;align-items:center;gap:5px;color:var(--ok)}
 .live::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .grp{display:flex;align-items:center;gap:2px}
@@ -140,6 +143,9 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .tab[aria-selected="true"]{background:var(--soft);color:var(--ink)}
 @media (hover:hover){.tab:not([aria-selected="true"]):hover{color:var(--ink)}}
 body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{display:none!important}
+body:not([data-edit="on"]) .edit-only{display:none!important}
+.btn.edit{min-height:34px;padding:0 12px;font-size:13px;margin-right:4px}
+.btn.edit[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
 
 /* Games */
 .gamebar{position:relative;overflow:hidden;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 8px 8px 16px}
@@ -287,6 +293,7 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
   <symbol id="i-paste" viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="15" rx="2"/><path d="M9 5V4h6v1M9.5 11h5M9.5 15h5"/></symbol>
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5L20 16M20 20v-4h-4"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></symbol>
   <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol>
 </svg>
 
@@ -305,7 +312,7 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
 
 <div class="app">
   <section class="stage" aria-label="Board">
-    <div class="tools editor-only" id="tools" role="toolbar" aria-label="Hold role"></div>
+    <div class="tools editor-only edit-only" id="tools" role="toolbar" aria-label="Hold role"></div>
 
     <div class="gamebar games-only">
       <div class="gtitle"><b id="gName">Hole in the Wall</b><span id="gStatus" role="status">Ready</span></div>
@@ -314,12 +321,13 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
     </div>
 
     <div class="boardbar editor-only">
-      <span class="total"><span id="total">No holds set</span><span class="live" id="live" hidden>Live on board</span></span>
+      <span class="total"><span class="ctitle" id="climbTitle" hidden><b id="ctName"></b><span id="ctInfo"></span></span><span id="total">No holds set</span><span class="live" id="live" hidden>Live on board</span></span>
       <div class="grp">
-        <button class="btn icon ghost" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="i"><use href="#i-undo"/></svg></button>
-        <button class="btn icon ghost" id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="i"><use href="#i-redo"/></svg></button>
-        <button class="btn icon ghost" id="eraseAllBtn" title="Erase all holds" aria-label="Erase all holds"><svg class="i"><use href="#i-trash"/></svg></button>
-        <span class="sep"></span>
+        <button class="btn edit" id="editBtn" aria-pressed="false" title="Unlock the board to change holds"><svg class="i"><use href="#i-pen"/></svg><span id="editLabel">Edit</span></button>
+        <button class="btn icon ghost edit-only" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="i"><use href="#i-undo"/></svg></button>
+        <button class="btn icon ghost edit-only" id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="i"><use href="#i-redo"/></svg></button>
+        <button class="btn icon ghost edit-only" id="eraseAllBtn" title="Erase all holds" aria-label="Erase all holds"><svg class="i"><use href="#i-trash"/></svg></button>
+        <span class="sep edit-only"></span>
         <button class="btn icon ghost" id="zoomOut" title="Zoom out" aria-label="Zoom out"><svg class="i"><use href="#i-minus"/></svg></button>
         <button class="btn icon ghost" id="zoomIn" title="Zoom in" aria-label="Zoom in"><svg class="i"><use href="#i-plus"/></svg></button>
       </div>
@@ -329,7 +337,7 @@ body[data-mode="games"] .editor-only,body:not([data-mode="games"]) .games-only{d
   </section>
 
   <aside class="side">
-    <section class="card editor-only" aria-label="Climb">
+    <section class="card editor-only edit-only" aria-label="Climb">
       <input id="climbName" class="name" type="text" maxlength="60" placeholder="Untitled climb" autocomplete="off" aria-label="Climb name">
       <div class="picks">
         <label class="pick">Grade<select id="climbGrade"></select></label>
@@ -714,12 +722,24 @@ function currentEntry() { return state.tool === "custom" ? { role: "custom", col
 function sameEntry(a, b) { return !!a && !!b && a.role === b.role && (a.role !== "custom" || a.color === b.color); }
 function setHold(id, mode) { if (mode === "erase") state.holds.delete(id); else state.holds.set(id, currentEntry()); }
 function modeFor(id) { return (state.tool === "erase" || sameEntry(state.holds.get(id), currentEntry())) ? "erase" : "add"; }
+// The board is locked outside edit mode so a stray tap can't change a climb.
+function setEditing(on) {
+  state.editing = on; document.body.dataset.edit = on ? "on" : "off";
+  $("editBtn").setAttribute("aria-pressed", String(on)); $("editLabel").textContent = on ? "Done" : "Edit";
+  $("editBtn").title = on ? "Lock the board" : "Unlock the board to change holds";
+}
 function tapHold(id) {
   if (state.mode !== "editor") return;
+  if (!state.editing) { toast("Tap Edit to change holds."); return; }
   pushUndo(); setHold(id, modeFor(id)); haptic(); afterChange();
 }
+// The title names a climb exactly as loaded from a library; any hold change hides it until the next load.
+function showClimbTitle(on) {
+  $("climbTitle").hidden = !on; $("total").hidden = on;
+  if (on) { $("ctName").textContent = state.meta.name || "Untitled climb"; $("ctInfo").textContent = `${state.meta.grade || "No grade"} · ${state.meta.angle}°`; }
+}
 function afterChange() {
-  paintAll(); updateChips(); saveDraft();
+  showClimbTitle(false); paintAll(); updateChips(); saveDraft();
   $("undoBtn").disabled = !state.undo.length; $("redoBtn").disabled = !state.redo.length;
   $("eraseAllBtn").disabled = !state.holds.size;
   scheduleSync();
@@ -795,12 +815,12 @@ function paintAt(e) {
   if (id === null || ptr.seen.has(id)) return;
   ptr.seen.add(id);
   if (ptr.mode === null) ptr.mode = modeFor(id);
-  setHold(id, ptr.mode); haptic(); paintAll(); updateChips(); scheduleSync();
+  setHold(id, ptr.mode); haptic(); showClimbTitle(false); paintAll(); updateChips(); scheduleSync();
 }
 $("board").addEventListener("pointerdown", e => {
   if (e.button > 0 || state.mode !== "editor") return;
   ptr.down = true; ptr.x = e.clientX; ptr.y = e.clientY; ptr.startId = holdAt(e.clientX, e.clientY);
-  ptr.painting = e.pointerType === "mouse";   // a mouse paints by dragging; touch taps holds and scrolls a zoomed board
+  ptr.painting = state.editing && e.pointerType === "mouse";   // a mouse paints by dragging; touch taps holds and scrolls a zoomed board
   if (ptr.painting) {
     pushUndo(); ptr.mode = null; ptr.seen = new Set();
     $("board").setPointerCapture(e.pointerId);
@@ -986,7 +1006,7 @@ function saveToLibrary() {
 function loadClimb(c) {
   pushUndo(); restore(c.holds || []);
   state.meta = { name: c.name || "", grade: c.grade || "", angle: c.angle ?? 40, noMatch: !!c.noMatch };
-  syncMetaInputs(); afterChange(); renderLibrary();
+  syncMetaInputs(); afterChange(); showClimbTitle(true); renderLibrary();
   toast(`Loaded “${state.meta.name || "climb"}”`);
 }
 function noMatchBadge(ttl, on) {
@@ -1871,6 +1891,7 @@ function syncMetaInputs() {
 
 /* ---------- Wiring ---------- */
 $("connectBtn").addEventListener("click", () => (state.chr || state.conn === "reconnecting") ? disconnect() : connect());
+$("editBtn").addEventListener("click", () => setEditing(!state.editing));
 $("undoBtn").addEventListener("click", undo);
 $("redoBtn").addEventListener("click", redo);
 $("zoomIn").addEventListener("click", () => { state.zoom = Math.min(300, state.zoom + 50); applyZoom(); });
@@ -1901,9 +1922,9 @@ $("commMore").addEventListener("click", () => loadCommunity(false));
 $("commSearch").addEventListener("input", e => { comm.q = e.target.value; clearTimeout(comm.timer); comm.timer = setTimeout(() => loadCommunity(true), 350); });
 $("copyClimbBtn").addEventListener("click", () => copyText(JSON.stringify(climbJSON(), null, 1), "Climb JSON copied"));
 $("copyLibBtn").addEventListener("click", () => copyText(JSON.stringify(state.library, null, 1), `Library copied (${state.library.length} climbs)`));
-$("climbName").addEventListener("input", e => { state.meta.name = e.target.value; saveDraft(); });
-$("climbGrade").addEventListener("change", e => { state.meta.grade = e.target.value; saveDraft(); });
-$("climbAngle").addEventListener("change", e => { state.meta.angle = +e.target.value; saveDraft(); });
+$("climbName").addEventListener("input", e => { state.meta.name = e.target.value; showClimbTitle(false); saveDraft(); });
+$("climbGrade").addEventListener("change", e => { state.meta.grade = e.target.value; showClimbTitle(false); saveDraft(); });
+$("climbAngle").addEventListener("change", e => { state.meta.angle = +e.target.value; showClimbTitle(false); saveDraft(); });
 $("climbNoMatch").addEventListener("change", e => { state.meta.noMatch = e.target.checked; saveDraft(); });
 window.addEventListener("hashchange", loadFromHash);
 $("warnClose").addEventListener("click", () => { $("warn").hidden = true; });
@@ -1923,6 +1944,7 @@ document.addEventListener("keydown", e => {
     if (["pageup", "arrowleft", "arrowup", "backspace"].includes(k)) { e.preventDefault(); act("miss"); return; }
     return;
   }
+  if (!state.editing) return;
   if ((e.ctrlKey || e.metaKey) && k === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if ((e.ctrlKey || e.metaKey) && k === "y") { e.preventDefault(); redo(); return; }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1932,7 +1954,7 @@ document.addEventListener("keydown", e => {
 
 /* ---------- Boot ---------- */
 (function boot() {
-  buildTools(); buildMeta(); syncBoostUI();
+  buildTools(); buildMeta(); syncBoostUI(); setEditing(false);
   const draft = store.get("draft", null);
   if (draft) { restore(draft.holds || []); state.meta = Object.assign(state.meta, draft.meta || {}); }
   syncMetaInputs();
