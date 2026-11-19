@@ -704,7 +704,9 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- Editing ---------- */
 function snapshot() { return [...state.holds].map(([id, e]) => [id, e.role, e.color || null]); }
-function restore(s) { state.holds = new Map(s.filter(([id]) => ALL[id]).map(([id, role, color]) => [id, role === "custom" ? { role, color } : { role }])); }
+// Holds come from files, links, the draft and the community list: keep only ones the app can draw and send.
+const validHold = h => Array.isArray(h) && Number.isInteger(h[0]) && !!ALL[h[0]] && (Object.hasOwn(ROLES, h[1]) || (h[1] === "custom" && /^#[0-9A-F]{6}$/i.test(h[2] || "")));
+function restore(s) { state.holds = new Map((Array.isArray(s) ? s : []).filter(validHold).map(([id, role, color]) => [id, role === "custom" ? { role, color: color.toUpperCase() } : { role }])); }
 function pushUndo() { state.undo.push(snapshot()); if (state.undo.length > 200) state.undo.shift(); state.redo = []; }
 function undo() { if (!state.undo.length) return; state.redo.push(snapshot()); restore(state.undo.pop()); afterChange(); }
 function redo() { if (!state.redo.length) return; state.undo.push(snapshot()); restore(state.redo.pop()); afterChange(); }
@@ -1059,7 +1061,7 @@ function importText(text) {
     if (Array.isArray(data)) {
       const climbs = data.map(normalizeClimb).filter(Boolean);
       if (!climbs.length) throw new Error("No climbs found in that text.");
-      for (const c of climbs) { c.updated = Date.now(); const i = state.library.findIndex(x => x.name === c.name); if (i >= 0) state.library[i] = c; else state.library.push(c); }
+      for (const c of climbs) { c.updated = Date.now(); const i = state.library.findIndex(x => String(x.name).toLowerCase() === String(c.name).toLowerCase()); if (i >= 0) state.library[i] = c; else state.library.push(c); }
       saveLibrary(); renderLibrary(); toast(`Imported ${climbs.length} climb${climbs.length === 1 ? "" : "s"}`);
     } else {
       const c = data && normalizeClimb(data);
